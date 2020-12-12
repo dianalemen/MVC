@@ -1,63 +1,76 @@
-import { model } from './../model/independent';
-
-export interface currency {
-  name: string,
-  rate: number
-}
+import * as Handlebars from 'handlebars';
+import { Model } from './../model/model';
+import { Currency } from './../model/model';
 
 export class SlidersView {
-  app: HTMLElement | null | undefined;
+  view: HTMLElement | null | undefined;
   form: HTMLElement | null | undefined;
-  currentExchangeRateInput: HTMLElement | null | undefined;
-  euroInput: HTMLElement | null | undefined;
-  currentExchangeLabel: HTMLElement | null | undefined;
-  euroInputLabel: HTMLElement | null | undefined;
-  dMInput: HTMLElement | null | undefined;
-  dMInputLabel: HTMLElement | null | undefined;
-  controller: any;
-  model: model;
+  model: Model;
 
-  constructor(model: model) {
+  constructor(model: Model) {
     this.model = model;
-    this.createMockUp()
+    this.createMockUp();
+  }
+
+  generateSliderGroupTemplate(currency: Currency) {
+    const maxResultValue = currency.rate * 100;
+    const resultLabelId = `resultSliderLabel-${currency.name}`;
+    Handlebars.registerHelper('resultLabelUpdater',
+      () => `document.getElementById('${resultLabelId}').innerText = '${currency.name}' + ':' + this.form.resultRateSlider.value`
+    );
+    Handlebars.registerHelper('resultRateUpdater', () => `this.form.resultRateSlider.value = this.form.currentRateSlider.value * this.form.currentRateInput.value`);
+    Handlebars.registerHelper('currentRateUpdater', () => `
+      this.form.currentRateSlider.value = this.form.resultRateSlider.value / this.form.currentRateInput.value;
+    `);
+    Handlebars.registerHelper('maxValueUpdater', () => `document.getElementById('result-rate-slider').max = 100 * this.form.currentRateInput.value`);
+    Handlebars.registerHelper('resultMaxValue', () => `100 * this.form.currentRateInput.value`)
+    Handlebars.registerHelper('triggerOnChange', () => `document.dispatchEvent(new Event('triggerView'))`)
+    const template = Handlebars.compile(`
+    <form id="form">
+      <fieldset>
+        <legend>{{currency.name}}</legend>
+        1 Euro is 
+        <input
+          type="number"
+          min="0"
+          value={{currency.rate}}
+          id="current-rate-input"
+          name="currentRateInput"
+          oninput=" {{ maxValueUpdater }}; {{ resultRateUpdater }}; {{ resultLabelUpdater }};"
+        />
+        {{ currency.rate }} {{ currency.name }} <br>
+        <div style="display:inline-block">
+          <label for="current-rate-slider" style="display:block">Euro</label>
+          <input
+            type="range"
+            min="0" max="100"
+            id="current-rate-slider"
+            name="currentRateSlider"
+            oninput="{{ resultRateUpdater }}; {{ resultLabelUpdater }}"
+          />
+        </div>
+        <div style="display: inline-block">
+          <label for="result-rate-slider" id="{{resultLabelId}}" style="display:block">{{ currency.name }}</label>
+          <input
+            min="0"
+            max="{{ maxResultValue }}"
+            type="range"
+            id="result-rate-slider"
+            name="resultRateSlider"
+            oninput="{{ resultLabelUpdater }} {{ currentRateUpdater }}"
+          />
+        </div>
+        <br>
+      </fieldset>
+    </form>
+    `);
+    return template({ currency, maxResultValue, resultLabelId });
   }
 
   createMockUp() {
-    this.app = document.getElementById('app');
-    this.form = document.createElement('form');
+    this.view = document.getElementById('view');
 
-    this.currentExchangeRateInput = document.createElement('input');
-    this.currentExchangeRateInput.setAttribute('type', 'range');
-    this.currentExchangeRateInput.setAttribute('id', `current-rate-${1}`);
-
-    this.euroInput = document.createElement('input');
-    this.euroInput.setAttribute('type', 'range');
-    this.euroInput.setAttribute('id', `euro-${1}`);
-
-    this.dMInput = document.createElement('input');
-    this.dMInput.setAttribute('type', 'range');
-    this.dMInput.setAttribute('id', `dMInput`);
-
-    this.currentExchangeLabel = document.createElement('label');
-    this.currentExchangeLabel.setAttribute('for', `current-rate--${1}`);
-    this.currentExchangeLabel.appendChild(document.createTextNode('Euro is'));
-
-    this.euroInputLabel = document.createElement('label');
-    this.euroInputLabel.setAttribute('for', `euro-${1}`);
-    this.euroInputLabel.appendChild(document.createTextNode('Euro'));
-
-    this.dMInputLabel = document.createElement('label');
-    this.dMInputLabel.setAttribute('for', `dm-${1}`);
-    this.dMInputLabel.appendChild(document.createTextNode(`${1}`));
-
-    this.form.append(
-      this.currentExchangeRateInput,
-      this.euroInput,
-      this.dMInput,
-      this.currentExchangeLabel,
-      this.euroInputLabel,
-      this.dMInputLabel
-    );
-    this.app && this.app.append(this.form);
+    const currenciesTemplate = this.model.currencies.map(currency => this.generateSliderGroupTemplate(currency)).join('<br>');
+    (this.view as HTMLElement).innerHTML = currenciesTemplate;
   }
 }
