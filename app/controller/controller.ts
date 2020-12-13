@@ -1,4 +1,4 @@
-import { Independent } from '../model/model';
+import { Model } from '../model/model';
 import { MainView } from '../view/main';
 
 import { InputsView } from '../view/inputs';
@@ -10,20 +10,32 @@ export class Controller {
   isSlidersView: boolean;
   isIndependentModel: boolean;
 
-  constructor(isSlidersView: boolean, isIndependentModel: boolean) {
-    this.model = new Independent();
-    const currentView = isSlidersView ? SlidersView : InputsView;
-    this.view = new MainView(currentView, this.model);
-    this.isSlidersView = isSlidersView;
-    this.isIndependentModel = isIndependentModel;
+  constructor() {
+    this.isIndependentModel = false;
+    this.isSlidersView = true;
+    this.model = new Model();
+    const currentView = this.isSlidersView ? SlidersView : InputsView;
+    this.view = new MainView(currentView, this.model, this.isSlidersView, this.isIndependentModel);
 
     document.addEventListener("triggerView", () => {
-      new Controller(!this.isSlidersView, this.isIndependentModel)
+      this.isSlidersView = !this.isSlidersView;
+      this.view = new MainView(this.isSlidersView ? SlidersView : InputsView, this.model, this.isSlidersView, this.isIndependentModel);
     });
 
     document.addEventListener("triggerModel", () => {
-      new Controller(this.isSlidersView, !this.isIndependentModel)
+      this.isIndependentModel= !this.isIndependentModel;
+      this.view = new MainView(this.isSlidersView ? SlidersView : InputsView, this.model, this.isSlidersView, this.isIndependentModel);
     });
+
+    document.addEventListener("triggerCurrencyChange", ((event: CustomEvent) => {
+      const { detail } = event;
+      if (this.isIndependentModel) {
+        this.model.updateCurrencies(detail.value, detail.currencyName)
+      } else {
+        this.model.updateCurrencies(detail.value)
+        this.view = new MainView(this.isSlidersView ? SlidersView : InputsView, this.model, this.isSlidersView, this.isIndependentModel);
+      }
+    }) as EventListener);
   }
 
 }

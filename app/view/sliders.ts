@@ -15,6 +15,7 @@ export class SlidersView {
   generateSliderGroupTemplate(currency: Currency) {
     const maxResultValue = currency.rate * 100;
     const resultLabelId = `resultSliderLabel-${currency.name}`;
+
     Handlebars.registerHelper('resultLabelUpdater',
       () => `document.getElementById('${resultLabelId}').innerText = '${currency.name}' + ':' + this.form.resultRateSlider.value`
     );
@@ -25,51 +26,55 @@ export class SlidersView {
     Handlebars.registerHelper('maxValueUpdater', () => `document.getElementById('result-rate-slider').max = 100 * this.form.currentRateInput.value`);
     Handlebars.registerHelper('resultMaxValue', () => `100 * this.form.currentRateInput.value`)
     Handlebars.registerHelper('triggerOnChange', () => `document.dispatchEvent(new Event('triggerView'))`)
+    Handlebars.registerHelper('currentRateInputUpdater', () => `document.dispatchEvent(new CustomEvent(
+      'triggerCurrencyChange', { detail: { value: this.form.currentRateInput.value, currencyName: '${currency.name}' } }
+      ))`)
+
     const template = Handlebars.compile(`
-    <form id="form">
-      <fieldset>
-        <legend>{{currency.name}}</legend>
-        1 Euro is 
-        <input
-          type="number"
-          min="0"
-          value={{currency.rate}}
-          id="current-rate-input"
-          name="currentRateInput"
-          oninput=" {{ maxValueUpdater }}; {{ resultRateUpdater }}; {{ resultLabelUpdater }};"
-        />
-        {{ currency.rate }} {{ currency.name }} <br>
-        <div style="display:inline-block">
-          <label for="current-rate-slider" style="display:block">Euro</label>
+      <form id="form">
+        <fieldset>
+          <legend>{{ currency.name }}</legend>
+          1 Euro is 
           <input
-            type="range"
-            min="0" max="100"
-            id="current-rate-slider"
-            name="currentRateSlider"
-            oninput="{{ resultRateUpdater }}; {{ resultLabelUpdater }}"
-          />
-        </div>
-        <div style="display: inline-block">
-          <label for="result-rate-slider" id="{{resultLabelId}}" style="display:block">{{ currency.name }}</label>
-          <input
+            type="number"
             min="0"
-            max="{{ maxResultValue }}"
-            type="range"
-            id="result-rate-slider"
-            name="resultRateSlider"
-            oninput="{{ resultLabelUpdater }} {{ currentRateUpdater }}"
+            value={{ currency.rate }}
+            id="current-rate-input"
+            name="currentRateInput"
+            oninput="{{ currentRateInputUpdater }}; {{ maxValueUpdater }}; {{ resultRateUpdater }}; {{ resultLabelUpdater }};"
           />
-        </div>
-        <br>
-      </fieldset>
-    </form>
+          {{ currency.rate }} {{ currency.name }} <br>
+          <div style="display:inline-block">
+            <label for="current-rate-slider" style="display:block">Euro</label>
+            <input
+              type="range"
+              min="0" max="100"
+              id="current-rate-slider"
+              name="currentRateSlider"
+              oninput="{{ resultRateUpdater }}; {{ resultLabelUpdater }}"
+            />
+          </div>
+          <div style="display: inline-block">
+            <label for="result-rate-slider" id="{{ resultLabelId }}" style="display:block">{{ currency.name }}</label>
+            <input
+              min="0"
+              max="{{ maxResultValue }}"
+              type="range"
+              id="result-rate-slider"
+              name="resultRateSlider"
+              oninput="{{ resultLabelUpdater }} {{ currentRateUpdater }}"
+            />
+          </div>
+          <br>
+        </fieldset>
+      </form>
     `);
     return template({ currency, maxResultValue, resultLabelId });
   }
 
   createMockUp() {
     this.view = document.getElementById('view');
-
+  
     const currenciesTemplate = this.model.currencies.map(currency => this.generateSliderGroupTemplate(currency)).join('<br>');
     (this.view as HTMLElement).innerHTML = currenciesTemplate;
   }

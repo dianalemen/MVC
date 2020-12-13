@@ -1,15 +1,19 @@
 import * as Handlebars from 'handlebars';
-import { Model } from '../model/model';
+import { ModelInterface } from '../model/model';
 
 export class MainView {
   app: HTMLElement | null | undefined;
   form: HTMLElement | null | undefined;
-  model: Model;
-  current;
+  model: ModelInterface;
+  currentView;
+  isSlidersView: boolean;
+  isIndependentModel: boolean;
 
-  constructor(current: any, model: Model) {
+  constructor(currentView: any, model: ModelInterface, isSlidersView: boolean, isIndependentModel: boolean) {
     this.model = model;
-    this.current = current;
+    this.currentView = currentView;
+    this.isSlidersView = isSlidersView;
+    this.isIndependentModel = isIndependentModel;
     this.createMockUp();
   }
 
@@ -17,20 +21,28 @@ export class MainView {
     Handlebars.registerHelper('triggerViewChange', () => `document.dispatchEvent(new Event('triggerView'))`);
     Handlebars.registerHelper('triggerModelChange', () => `document.dispatchEvent(new Event('triggerModel'))`)
 
+    Handlebars.registerHelper('sliderView', () => `${this.isSlidersView}
+      ? document.getElementById('togViewBtn').removeAttribute("checked")
+      : document.getElementById('togViewBtn').setAttribute("checked", "checked")`)
+
+    Handlebars.registerHelper('independentModel', () => `${this.isIndependentModel}
+      ? document.getElementById('togModelBtn').setAttribute("checked", "checked")
+      : document.getElementById('togModelBtn').removeAttribute("checked")`)
+
     const template = Handlebars.compile(`
-    <label><input type="checkbox" id="togViewBtn" onchange="{{triggerViewChange}}"><span>Switch view</span></label>
+    <label><input type="checkbox" id="togViewBtn" checked onchange="{{ triggerViewChange }}; {{ sliderView }}"><span>Slider view on</span></label>
       <br />
-    <label><input type="checkbox" id="togModelBtn" onchange="{{triggerModelChange}}"><span>Switch model</span></label>
+    <label><input type="checkbox" id="togModelBtn" checked onchange="{{ triggerModelChange }}; {{ independentModel }}"><span>Single model on</span></label>
     <div id="view"></div>
     `);
-    return template({});
+    return template({ isSlidersView: this.isSlidersView, isIndependentModel: this.isIndependentModel});
   }
 
 
   createMockUp() {
     this.app = document.getElementById('app');
-
+  
     (this.app as HTMLElement).innerHTML = this.generateMainTemplate();
-    new this.current(this.model);
+    new this.currentView(this.model);
   }
 }
